@@ -5,4 +5,4 @@ Write a plain text list, pick a color and transform it into cards that you can d
 
 The cards can be saved and opened as *.cards* files.
 
-For ease of use, there is a 'bundled' version (one file only).
+Double-click a card to change its text. Right-click a card to delete it.
