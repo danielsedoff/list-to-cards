@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <style>
+        .borderedDiv {
+            margin: 3px;
+            padding: 3px;
+            border: 1px solid black;
+            display: inline;
+        }
+
+        .draggableDiv {
+            border: 1px solid #999999;
+            cursor: move;
+            padding: 10px;
+            position: absolute;
+            text-align: center;
+            width: 200px;
+        }
+
+        .sourceList {
+            height: 100px;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <h2>Transform your list into cards that you can drag around. Pick a color. Save and load your card sets into
+            files.</h2>
+        <textarea class="sourceList">
+card one
+card two
+card three
+card four
+card five
+card six
+      
+    </textarea>
+    </div>
+    <hr />
+
+    <div class="borderedDiv">
+        <span>width, pixels:</span>
+        <input type="number" value="200" id="cardWidthElement" />
+    </div>
+    <div class="borderedDiv">
+        <input type="button" onclick="createMovableElements()" value="Render" />
+    </div>
+    <div class="borderedDiv">
+        <input id="fileInputElement" type="file" name="name" />
+        <input type="button" onclick="loadDataFromFile()" value="Load" />
+    </div>
+    <div class="borderedDiv">
+        <input type="button" onclick="saveMovableElements()" value="Save As..." />
+        <input type="text" id="saveAsFilenameInput" value="draggableCards.cards" style="width: 30%" />
+    </div>
+
+    <div id="draggableContainer"></div>
+    <div id="paletteContainer"></div>
+
+    <script>
+
+        function createMovableElements() {
+            cardWidth = getCardWidthElementValue();
+
+            buttonOffset = getYCoord("paletteContainer");
+            draggableContainer = getDraggableContainer();
+
+            sourceText = document.getElementsByClassName("sourceList")[0].value;
+            sourceLines = sourceText.split("\n");
+
+            for (i = 0; i < sourceLines.length; i++) {
+                currentLine = sourceLines[i];
+                currentLine = currentLine.trim();
+
+                if ("" != currentLine) {
+                    div = document.createElement("div");
+                    /* div.innerHTML = currentLine; */
+
+                    newSpan = document.createElement('span');
+                    newSpan.innerHTML = currentLine;
+                    newSpan.style.backgroundColor = "#ffffff";
+                    div.appendChild(newSpan);
+
+
+                    div.className = "draggableDiv";
+                    draggableContainer.appendChild(div);
+                    div.style.top = buttonOffset + 50 + i * 50 + "px";
+                    div.style.width = cardWidth + "px";
+                    div.style.backgroundColor = document.getElementById("palettePointer").style.backgroundColor;
+                    div.style.color = "black";
+                }
+            }
+
+            makeAllAppropriateDivsDraggable();
+        }
+
+
+        function makeAllAppropriateDivsDraggable() {
+            draggableDivs = document.getElementsByClassName("draggableDiv");
+            for (i = 0; i < draggableDivs.length; i++) {
+                div = draggableDivs[i];
+                dragElement(div);
+                div.style.position = "absolute";
+                div.addEventListener("dblclick", function () {
+                    newContent = prompt("Change this element", this.children[0].innerHTML);
+                    if (null != newContent) {
+                        this.children[0].innerHTML = newContent;
+                    }
+                });
+
+                div.addEventListener("contextmenu", function () {
+                    if (true == confirm("Delete this element?")) this.remove();
+                });
+            }
+        } function saveMovableElements() {
+            draggableContainerContent = getDraggableContainer().innerHTML;
+            downloadBlob(
+                draggableContainerContent,
+                getSaveAsFilenameValue(),
+                "text/html"
+            );
+        }
+
+
+        function downloadBlob(data, filename, type) {
+            var file = new Blob([data], { type: type });
+            if (window.navigator.msSaveOrOpenBlob)
+                window.navigator.msSaveOrOpenBlob(file, filename);
+            else {
+                var a = document.createElement("a"),
+                    url = URL.createObjectURL(file);
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(function () {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }, 0);
+            }
+        }
+
+        function insertPaletteElement(targetElementId) {
+
+            backgroundColorCollection = "ff0000,ff2200,ff4400,ff6600,ff8800,ffaa00,ffbb00,ffcc00,ffdd00," +
+                "ffff00,eeff00,ddff00,ccff00,aaff00,88ff00,66ff00,44ff00,22ff00,00ff00,00ff22,00ff44," +
+                "00ff66,00ff88,00ffaa,00ffbb,00ffcc,00ffdd,00ffee,00ffff,00eeff,00ddff,00ccff,00bbff," +
+                "00aaff,0088ff,aa00ff,bb00ff,cc00ff,dd00ff,ee00ff,ff00ff,ff00ee,ff00dd,ff00cc,ff00bb," +
+                "ff00aa,ff0088,ff0066,ffaa88,ddccbb,ccbbdd,ddbbcc,aaddcc,ccddaa,aaccdd,ccaadd";
+
+            backgroundColorArray = backgroundColorCollection.split(",");
+
+            paletteTable = "<div style='position:absolute; opacity: 1; background-color:white;'>"
+            paletteTable += "<table><tr><td colspan=8 id='palettePointer' onclick='togglePalette()'"
+            paletteTable += "style='height: 16px; width: 128px; background-color: #2288ff'></tr>";
+
+            for (i = 0; i < 7; i++) {
+                paletteTable += "<tr>";
+                for (j = 0; j < 8; j++) {
+                    paletteTable += "<td class='toggleablePaletteCellElement' style='display:none; background-color: #";
+                    paletteTable += backgroundColorArray[i * 8 + j];
+                    paletteTable += "; width: 16px; height: 16px;' onclick='callPaletteAction(this);'> </td>";
+                }
+                paletteTable += "</tr>";
+            }
+            paletteTable += "</table></div>";
+
+            document.getElementById(targetElementId).innerHTML = paletteTable;
+        }
+
+        function callPaletteAction(elem) {
+            document.getElementById("palettePointer").style.backgroundColor = elem.style.backgroundColor;
+        }
+
+        function togglePalette() {
+            toggleables = document.getElementsByClassName("toggleablePaletteCellElement");
+            for (i = 0; i < toggleables.length; i++) {
+                if (toggleables[i].style.display == 'none') {
+                    toggleables[i].style.display = '';
+                } else {
+                    toggleables[i].style.display = 'none';
+                }
+            }
+        }
+
+        insertPaletteElement("paletteContainer");
+        function dragElement(elem) {
+            var pos1 = 0,
+                pos2 = 0,
+                pos3 = 0,
+                pos4 = 0;
+
+            elem.onmousedown = dragMouseDown;
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                // get the mouse cursor position at startup:
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                // call a function whenever the cursor moves:
+                document.onmousemove = elementDrag;
+                document.ontouchmove = elementDrag;
+
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                // calculate the new cursor position:
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                // set the element's new position:
+                elem.style.top = elem.offsetTop - pos2 + "px";
+                elem.style.left = elem.offsetLeft - pos1 + "px";
+            }
+
+            function closeDragElement() {
+                /* stop moving when mouse button is released:*/
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+        function getCardWidthElementValue() {
+            return document.getElementById("cardWidthElement").value;
+        }
+
+        function getSaveAsFilenameValue() {
+            return document.getElementById("saveAsFilenameInput").value;
+        }
+
+        function getDraggableContainer() {
+            return document.getElementById("draggableContainer");
+        }
+
+        function getYCoord(id) {
+            elem = document.getElementById(id);
+            elemRect = elem.getBoundingClientRect();
+            return elemRect.bottom;
+        }
+        function loadDataFromFile() {
+            fileInputElement = document.getElementById("fileInputElement");
+            draggableContainer = getDraggableContainer();
+            file = fileInputElement.files[0];
+
+            if (file) {
+                reader = new FileReader();
+                reader.readAsText(file, "UTF-8");
+                reader.onload = function (evt) {
+                    draggableContainer.innerHTML = evt.target.result;
+                    makeAllAppropriateDivsDraggable();
+                    document.getElementById("saveAsFilenameInput").value = file.name;
+                };
+                reader.onerror = function (evt) {
+                    draggableContainer.innerHTML = "error reading file";
+                };
+            }
+        }
+
+
+    </script>
+
+
+</body>
+
+</html>
