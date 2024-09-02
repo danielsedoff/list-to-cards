@@ -1,5 +1,8 @@
 # list-to-cards
+
 Transform lists into cards and drag them around.
+
+![screenshot](image.png "Screenshot")
 
 Write a plain text list, pick a color and transform it into cards that you can drag around.
 
